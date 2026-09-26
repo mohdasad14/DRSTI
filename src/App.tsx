@@ -60,6 +60,8 @@ export default function App() {
   const [showGeminiModal, setShowGeminiModal] = useState(false);
   const [probeRequested, setProbeRequested] = useState(false);
   const [aiAvailable, setAiAvailable] = useState(false);
+  const [liveTelemetryEnabled, setLiveTelemetryEnabled] = useState(false);
+  const streamCounterRef = useRef(1);
 
   // Timing
   const [startTime, setStartTime] = useState<number>(Date.now());
@@ -85,6 +87,91 @@ export default function App() {
         // Local rule-based fallback
       });
   }, []);
+
+  // Live Telemetry Polling Engine (Every 5 seconds)
+  useEffect(() => {
+    if (!liveTelemetryEnabled) return;
+
+    const interval = setInterval(() => {
+      streamCounterRef.current += 1;
+      const pollId = streamCounterRef.current;
+      const origin = currentScenario.groundTruthOriginService;
+      const isResolved = currentState === 'RESOLVED';
+
+      let eventLevel: 'INFO' | 'WARN' | 'ERROR' = 'INFO';
+      let eventMessage = '';
+      let eventMetadata: Record<string, any> = {};
+
+      if (isResolved) {
+        eventLevel = 'INFO';
+        eventMessage = `Telemetry Probe #${pollId}: Service ${origin} healthy — latency p99: ${
+          14 + Math.floor(Math.random() * 8)
+        }ms, error_rate: 0.00%`;
+        eventMetadata = { healthCheck: '200_OK', activeReplicas: 3, latencyMs: 16 };
+      } else {
+        if (currentScenario.id === 'db-pool-exhaustion') {
+          eventLevel = pollId % 2 === 0 ? 'ERROR' : 'WARN';
+          eventMessage =
+            eventLevel === 'ERROR'
+              ? `HikariPool-1 pool exhausted: [Thread-worker-${pollId}] connection acquisition timed out after 30000ms`
+              : `HikariPool-1 queue backlog: ${390 + Math.floor(Math.random() * 60)} threads waiting (active: 100/100, idle: 0)`;
+          eventMetadata = { activeConnections: 100, idle: 0, waiting: 410 + pollId };
+        } else if (currentScenario.id === 'memory-leak-oom') {
+          eventLevel = pollId % 2 === 0 ? 'ERROR' : 'WARN';
+          eventMessage =
+            eventLevel === 'ERROR'
+              ? `JVM GC overhead warning: Stop-the-world pause lasted ${
+                  1200 + Math.floor(Math.random() * 300)
+                }ms on ${origin}`
+              : `Heap utilization sample: ${(98.2 + Math.random() * 1.5).toFixed(1)}% (heapMax: 4096MB)`;
+          eventMetadata = { jvmHeapPercent: 99.1, exitCodeCheck: 'SIGKILL_PENDING' };
+        } else if (currentScenario.id === 'canary-envoy-routing') {
+          eventLevel = 'ERROR';
+          eventMessage = `Envoy mTLS handshake drop: peer cert verification rejected on canary upstream route [attempt #${pollId}]`;
+          eventMetadata = { error: 'SSLV3_ALERT_BAD_CERTIFICATE', canaryWeight: 100 };
+        } else if (currentScenario.id === 'kafka-consumer-lag-storm') {
+          eventLevel = 'WARN';
+          eventMessage = `Kafka group rebalance jitter: consumer heartbeat delayed by ${
+            3200 + Math.floor(Math.random() * 1200)
+          }ms`;
+          eventMetadata = { consumerLag: 864200 + pollId * 150 };
+        } else {
+          eventLevel = 'WARN';
+          eventMessage = `Kernel tcp_probe: socket buffer backlog overflow drop counter incremented on ${origin}`;
+          eventMetadata = { droppedPackets: 240 + pollId * 20 };
+        }
+      }
+
+      const newLog = {
+        id: `live-log-${Date.now()}-${pollId}`,
+        timestamp: Date.now(),
+        level: eventLevel,
+        service: origin,
+        message: eventMessage,
+        metadata: eventMetadata,
+      };
+
+      // Ingest live telemetry and update state
+      setTelemetry((prev) => {
+        const updated = {
+          ...prev,
+          logs: [newLog, ...prev.logs],
+        };
+        // Trigger Ingestion Timeline Engine with fresh telemetry frame
+        ingestionRef.current.ingest(updated);
+        return updated;
+      });
+
+      addAgentLog(
+        'Orchestrator',
+        `[Live Telemetry] Ingested cluster frame #${pollId} from ${origin}`,
+        eventLevel === 'ERROR' ? 'error' : eventLevel === 'WARN' ? 'warn' : 'info',
+        eventMessage
+      );
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [liveTelemetryEnabled, currentScenario, currentState]);
 
   // Timer
   useEffect(() => {
@@ -519,6 +606,8 @@ export default function App() {
         onOpenGeminiModal={() => setShowGeminiModal(true)}
         aiAvailable={aiAvailable}
         onOpenSettings={() => setSidebarTab('settings')}
+        liveTelemetryEnabled={liveTelemetryEnabled}
+        onToggleLiveTelemetry={() => setLiveTelemetryEnabled((prev) => !prev)}
       />
 
       <div className="flex-1 flex overflow-hidden">

@@ -16,6 +16,8 @@ interface TopHeaderProps {
   onOpenGeminiModal: () => void;
   aiAvailable: boolean;
   onOpenSettings: () => void;
+  liveTelemetryEnabled: boolean;
+  onToggleLiveTelemetry: () => void;
 }
 
 export const TopHeader: React.FC<TopHeaderProps> = ({
@@ -31,6 +33,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   onOpenGeminiModal,
   aiAvailable,
   onOpenSettings,
+  liveTelemetryEnabled,
+  onToggleLiveTelemetry,
 }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -55,9 +59,43 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
       </div>
 
       {/* Right Controls */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5 sm:gap-3">
+        {/* Live Telemetry 5s Polling Toggle */}
+        <button
+          onClick={onToggleLiveTelemetry}
+          title={
+            liveTelemetryEnabled
+              ? 'Live Telemetry active: polling cluster event frames every 5s'
+              : 'Enable Live Telemetry: automatically polls simulated event frames every 5s'
+          }
+          className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+            liveTelemetryEnabled
+              ? 'bg-blue-950/30 border-blue-500/40 text-blue-200 shadow-sm shadow-blue-950/40'
+              : 'bg-[#111114] hover:bg-[#15151a] border-[#222228] text-zinc-400 hover:text-zinc-200'
+          }`}
+        >
+          {liveTelemetryEnabled ? (
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
+            </span>
+          ) : (
+            <span className="w-2 h-2 rounded-full bg-zinc-600" />
+          )}
+          <span className="text-xs font-semibold">Live Telemetry</span>
+          <span
+            className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
+              liveTelemetryEnabled
+                ? 'bg-blue-500/20 text-blue-300 font-bold'
+                : 'bg-[#18181f] text-zinc-500'
+            }`}
+          >
+            {liveTelemetryEnabled ? '5s ON' : 'OFF'}
+          </span>
+        </button>
+
         {/* System Online Badge */}
-        <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#111114] border border-[#202024] text-xs text-zinc-300">
+        <div className="hidden xl:flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#111114] border border-[#202024] text-xs text-zinc-300">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
