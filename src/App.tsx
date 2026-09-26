@@ -30,6 +30,8 @@ import { IncidentSummaryCard } from './components/IncidentSummaryCard';
 import { BottomActionsBar } from './components/BottomActionsBar';
 import { ApprovalGateModal } from './components/ApprovalGateModal';
 import { GeminiCopilotModal } from './components/GeminiCopilotModal';
+import { IncidentCatalogView } from './components/IncidentCatalogView';
+import { DrstiChatbot } from './components/DrstiChatbot';
 
 // Existing full-power views preserved in sub-tabs
 import { AuditLedgerView } from './components/AuditLedgerView';
@@ -682,76 +684,14 @@ export default function App() {
             </>
           )}
 
-          {/* VIEW: INCIDENTS (Catalog of all active & registered incidents) */}
+          {/* VIEW: INCIDENTS (Catalog of all active & registered incidents with severity filtering & sorting) */}
           {sidebarTab === 'incidents' && (
-            <div className="bg-[#0b0b0e] border border-[#1e1e24] rounded-xl p-6 space-y-4">
-              <div className="flex items-center justify-between border-b border-[#1c1c22] pb-4">
-                <div>
-                  <h2 className="text-base font-bold text-white tracking-tight">Active Incident Catalog</h2>
-                  <p className="text-xs text-zinc-400 mt-0.5">
-                    Select an incident to triage in the DRSTI primary command center.
-                  </p>
-                </div>
-                <span className="text-xs font-mono text-zinc-500 bg-[#121217] px-2.5 py-1 rounded-md border border-[#202026]">
-                  {scenarios.length} Scenarios Available
-                </span>
-              </div>
-
-              <div className="space-y-3">
-                {scenarios.map((sc) => {
-                  const isCurrent = sc.id === currentScenario.id;
-                  return (
-                    <div
-                      key={sc.id}
-                      className={`p-4 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
-                        isCurrent
-                          ? 'bg-[#121218] border-blue-500/40 shadow-sm'
-                          : 'bg-[#0d0d11] border-[#1f1f26] hover:border-[#2b2b36]'
-                      }`}
-                    >
-                      <div className="space-y-1 min-w-0 flex-1">
-                        <div className="flex items-center gap-2.5">
-                          <span className="font-mono text-xs font-bold text-blue-400">
-                            {sc.incidentCode || 'INC'}
-                          </span>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-500/10 text-red-400 border border-red-500/20">
-                            {sc.severity}
-                          </span>
-                          <span className="text-xs font-mono text-zinc-400">
-                            {sc.category}
-                          </span>
-                        </div>
-                        <h3 className="text-sm font-bold text-white truncate">
-                          {sc.shortTitle || sc.title}
-                        </h3>
-                        <p className="text-xs text-zinc-400 line-clamp-1">
-                          {sc.description}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className="text-xs font-mono text-zinc-500 hidden md:inline">
-                          {sc.groundTruthOriginService}
-                        </span>
-                        <button
-                          onClick={() => {
-                            handleSelectScenario(sc);
-                            setSidebarTab('overview');
-                          }}
-                          className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                            isCurrent
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-[#181820] hover:bg-[#20202a] text-zinc-200 border border-[#282834]'
-                          }`}
-                        >
-                          {isCurrent ? 'Active in Overview' : 'Investigate'}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            <IncidentCatalogView
+              scenarios={scenarios}
+              currentScenarioId={currentScenario.id}
+              onSelectScenario={handleSelectScenario}
+              onNavigateToOverview={() => setSidebarTab('overview')}
+            />
           )}
 
           {/* VIEW: EVENT STREAMS (Telemetry details & live stream) */}
@@ -817,6 +757,16 @@ export default function App() {
         isOpen={showGeminiModal}
         onClose={() => setShowGeminiModal(false)}
         scenario={currentScenario}
+      />
+
+      {/* DRSTI AI Assistant Floating Chatbot */}
+      <DrstiChatbot
+        currentScenario={currentScenario}
+        currentState={currentState}
+        telemetry={telemetry}
+        hypothesis={verifiedHypothesis || hypotheses[0]}
+        plan={plan}
+        onReviewRemediation={() => setShowApprovalModal(true)}
       />
     </div>
   );
