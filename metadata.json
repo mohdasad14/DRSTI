@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix AegisSRE - Autonomous Incident Diagnostic \u0026 Remediation Platform",
+  "description": "Multi-agent autonomous SRE platform for telemetry correlation, causal root-cause discovery, sandboxed digital twin execution, and human-in-the-loop remediation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
